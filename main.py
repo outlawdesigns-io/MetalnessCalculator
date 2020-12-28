@@ -15,8 +15,12 @@ class MetalnessCalculator:
     SWEAR_DATA = './data/swear_words_eng.txt'
     STOP_DATA = './data/stopwords_eng.txt'
     def __init__(self,metalDf,controlDf):
+        self.setData(metalDf,controlDf)
+        self.train()
+    def setData(self,metalDf,controlDf):
         self.metalDf = metalDf
         self.controlDf = controlDf
+    def train(self):
         self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
         self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
         self.PUNCTUATION =  list(string.punctuation) + ['..', '...', '’', "''", '``', '`']
@@ -24,7 +28,6 @@ class MetalnessCalculator:
         self.no_metal_word_freq_dist = self.get_word_frequence_distribution(self.controlDf,'lyrics')
         self.words_metalness_df = self.calculate_words_metalness(self.metal_word_freq_dist, self.no_metal_word_freq_dist)\
         .sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
-
     def get_word_frequence_distribution(self,df, text_column):
         words_corpus = " ".join(df[text_column].astype(str).values)
         words_corpus = words_corpus.lower().replace('\\n', ' ')

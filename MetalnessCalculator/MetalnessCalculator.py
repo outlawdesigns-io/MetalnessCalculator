@@ -1,3 +1,4 @@
+import os
 import math
 import matplotlib.pyplot as plt
 import nltk
@@ -9,11 +10,9 @@ import string
 from collections import Counter
 from nltk import FreqDist, tokenize
 
-import csv
-
 class MetalnessCalculator:
-    SWEAR_DATA = './data/swear_words_eng.txt'
-    STOP_DATA = './data/stopwords_eng.txt'
+    SWEAR_DATA = os.path.dirname(os.path.realpath(__file__)) + '/../data/swear_words_eng.txt'
+    STOP_DATA = os.path.dirname(os.path.realpath(__file__)) + '/../data/stopwords_eng.txt'
     def __init__(self,metalDf,controlDf):
         self.setData(metalDf,controlDf)
         self.train()

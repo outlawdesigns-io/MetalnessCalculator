@@ -10,15 +10,28 @@ import string
 from collections import Counter
 from nltk import FreqDist, tokenize
 
+from multiprocessing import Pool
+import os
+
 class MetalnessCalculator:
     SWEAR_DATA = os.path.dirname(os.path.realpath(__file__)) + '/../data/swear_words_eng.txt'
     STOP_DATA = os.path.dirname(os.path.realpath(__file__)) + '/../data/stopwords_eng.txt'
     def __init__(self,metalDf,controlDf):
         self.setData(metalDf,controlDf)
-        self.train()
+        #self.train()
+        self.train_pooled()
     def setData(self,metalDf,controlDf):
         self.metalDf = metalDf
         self.controlDf = controlDf
+    def train_pooled(self):
+        self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
+        self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
+        self.PUNCTUATION =  list(string.punctuation) + ['..', '...', '’', "''", '``', '`']
+        self.metal_word_freq_dist = self.get_word_frequence_distribution(self.metalDf, 'lyrics')
+        self.no_metal_word_freq_dist = self.get_word_frequence_distribution(self.controlDf,'lyrics')
+        p = Pool(os.cpu_count())
+        targetData = [self.metal_word_freq_dist, self.no_metal_word_freq_dist]
+        self.words_metalness_df = p.apply(self.calculate_words_metalness_pooled,(targetData,)).sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
     def train(self):
         self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
         self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
@@ -50,6 +63,23 @@ class MetalnessCalculator:
                 metal_coefficient = math.log((metal_wfd[w] / num_metal_words) / (no_metal_wfd[w] / num_no_metal_words))
                 metalness[w] = 1 / (1 + math.exp(-metal_coefficient / 2))
 
+        metalness_df = pd.DataFrame({
+            'words': list(metalness.keys()),
+            'metalness': list(metalness.values())
+        })
+        return metalness_df
+    def calculate_words_metalness_pooled(self,targetData):
+        metal_wfd = targetData[0]
+        no_metal_wfd = targetData[1]
+        no_metal_wfd = {k:v for k,v in no_metal_wfd.items() if v >= 5}
+        num_no_metal_words = sum(no_metal_wfd.values())
+        metal_wfd = {k:v for k,v in metal_wfd.items() if v >= 5}
+        num_metal_words = sum(metal_wfd.values())
+        metalness = {}
+        for w in metal_wfd.keys() & no_metal_wfd.keys():
+            if len(w) > 2:
+                metal_coefficient = math.log((metal_wfd[w] / num_metal_words) / (no_metal_wfd[w] / num_no_metal_words))
+                metalness[w] = 1 / (1 + math.exp(-metal_coefficient / 2))
         metalness_df = pd.DataFrame({
             'words': list(metalness.keys()),
             'metalness': list(metalness.values())

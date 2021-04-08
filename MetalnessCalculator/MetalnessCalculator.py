@@ -12,6 +12,7 @@ from nltk import FreqDist, tokenize
 
 from multiprocessing import Pool
 import os
+import time
 
 class MetalnessCalculator:
     SWEAR_DATA = os.path.dirname(os.path.realpath(__file__)) + '/../data/swear_words_eng.txt'
@@ -24,6 +25,7 @@ class MetalnessCalculator:
         self.metalDf = metalDf
         self.controlDf = controlDf
     def train_pooled(self):
+        start = time.time()
         self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
         self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
         self.PUNCTUATION =  list(string.punctuation) + ['..', '...', '’', "''", '``', '`']
@@ -32,7 +34,10 @@ class MetalnessCalculator:
         p = Pool(os.cpu_count())
         targetData = [self.metal_word_freq_dist, self.no_metal_word_freq_dist]
         self.words_metalness_df = p.apply(self.calculate_words_metalness_pooled,(targetData,)).sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
+        end = time.time()
+        print("Trained in: % seconds" % (end - start))
     def train(self):
+        start = time.time()
         self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
         self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
         self.PUNCTUATION =  list(string.punctuation) + ['..', '...', '’', "''", '``', '`']
@@ -40,6 +45,8 @@ class MetalnessCalculator:
         self.no_metal_word_freq_dist = self.get_word_frequence_distribution(self.controlDf,'lyrics')
         self.words_metalness_df = self.calculate_words_metalness(self.metal_word_freq_dist, self.no_metal_word_freq_dist)\
         .sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
+        end = time.time()
+        print("Trained in: % seconds" % (end - start))
     def get_word_frequence_distribution(self,df, text_column):
         words_corpus = " ".join(df[text_column].astype(str).values)
         words_corpus = words_corpus.lower().replace('\\n', ' ')

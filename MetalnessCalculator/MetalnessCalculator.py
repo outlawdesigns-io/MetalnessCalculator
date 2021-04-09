@@ -36,6 +36,18 @@ class MetalnessCalculator:
         self.words_metalness_df = p.apply(self.calculate_words_metalness_pooled,(targetData,)).sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
         end = time.time()
         print("Trained in: % seconds" % (end - start))
+    def train_mapped(self):
+        start = time.time()
+        self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
+        self.STOPWORDS = list(set([str(line.rstrip('\n')) for line in open(self.STOP_DATA, "r")]))
+        self.PUNCTUATION =  list(string.punctuation) + ['..', '...', '’', "''", '``', '`']
+        self.metal_word_freq_dist = self.get_word_frequence_distribution(self.metalDf, 'lyrics')
+        self.no_metal_word_freq_dist = self.get_word_frequence_distribution(self.controlDf,'lyrics')
+        #p = Pool(os.cpu_count())
+        #targetData = [self.metal_word_freq_dist, self.no_metal_word_freq_dist]
+        self.words_metalness_df = self.calculate_words_metalness_mapped(self.metal_word_freq_dist, self.no_metal_word_freq_dist).sort_values(['metalness'], ascending=False).reset_index().drop(columns=['index'])
+        end = time.time()
+        print("Trained in: % seconds" % (end - start))
     def train(self):
         start = time.time()
         self.SWEAR_WORDS = [str(line.rstrip('\n')) for line in open(self.SWEAR_DATA, "r")]
@@ -92,6 +104,23 @@ class MetalnessCalculator:
             'metalness': list(metalness.values())
         })
         return metalness_df
+    def calculate_words_metalness_mapped(self,metal_wfd, no_metal_wfd):
+        self.no_metal_wfd = {k:v for k,v in no_metal_wfd.items() if v >= 5}
+        self.num_no_metal_words = sum(no_metal_wfd.values())
+        self.metal_wfd = {k:v for k,v in metal_wfd.items() if v >= 5}
+        self.num_metal_words = sum(metal_wfd.values())
+        metalness = {}
+        mergedKeys = {k: metal_wfd.get(k,0) + no_metal_wfd.get(k,0) for k in metal_wfd.keys() | no_metal_wfd.keys()}
+        p.map(self.calculate_metalness_coef,mergedKeys)
+        metalness_df = pd.DataFrame({
+            'words': list(self.metalness.keys()),
+            'metalness': list(self.metalness.values())
+        })
+        return metalness_df
+    def calculate_metalness_coef(self,w):
+        if(w) > 2:
+            metal_coefficient = math.log((self.metal_wfd[w] / self.num_metal_words) / (self.no_metal_wfd[w] / self.num_no_metal_words))
+            self.metalness[w] = 1 / (1 + math.exp(-metal_coefficient / 2))
     def calculate_metalness_score(self,lyrics):
         lyrics = lyrics.lower().replace('\\n', ' ').strip()
         words = nltk.word_tokenize(lyrics)

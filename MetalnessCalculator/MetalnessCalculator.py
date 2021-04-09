@@ -20,7 +20,8 @@ class MetalnessCalculator:
     def __init__(self,metalDf,controlDf):
         self.setData(metalDf,controlDf)
         #self.train()
-        self.train_pooled()
+        #self.train_pooled()
+        self.train_mapped()
     def setData(self,metalDf,controlDf):
         self.metalDf = metalDf
         self.controlDf = controlDf

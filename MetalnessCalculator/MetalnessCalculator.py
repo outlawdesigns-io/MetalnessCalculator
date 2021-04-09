@@ -112,6 +112,7 @@ class MetalnessCalculator:
         self.num_metal_words = sum(metal_wfd.values())
         metalness = {}
         mergedKeys = {k: metal_wfd.get(k,0) + no_metal_wfd.get(k,0) for k in metal_wfd.keys() | no_metal_wfd.keys()}
+        p = Pool(os.cpu_count())
         p.map(self.calculate_metalness_coef,mergedKeys)
         metalness_df = pd.DataFrame({
             'words': list(self.metalness.keys()),

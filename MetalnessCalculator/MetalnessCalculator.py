@@ -1,3 +1,6 @@
+#calculate_words_metalness_mapped executes but doesn't work.
+#For now you're limited to apply or single threaded training
+
 import os
 import math
 import matplotlib.pyplot as plt
@@ -110,8 +113,8 @@ class MetalnessCalculator:
         self.num_no_metal_words = sum(no_metal_wfd.values())
         self.metal_wfd = {k:v for k,v in metal_wfd.items() if v >= 5}
         self.num_metal_words = sum(metal_wfd.values())
-        metalness = {}
-        mergedKeys = {k: metal_wfd.get(k,0) + no_metal_wfd.get(k,0) for k in metal_wfd.keys() | no_metal_wfd.keys()}
+        self.metalness = {}
+        mergedKeys = {k: self.metal_wfd.get(k,0) + self.no_metal_wfd.get(k,0) for k in self.metal_wfd.keys() & self.no_metal_wfd.keys()}
         p = Pool(os.cpu_count())
         p.map(self.calculate_metalness_coef,mergedKeys)
         metalness_df = pd.DataFrame({
@@ -120,7 +123,7 @@ class MetalnessCalculator:
         })
         return metalness_df
     def calculate_metalness_coef(self,w):
-        if(w) > 2:
+        if len(w) > 2:
             metal_coefficient = math.log((self.metal_wfd[w] / self.num_metal_words) / (self.no_metal_wfd[w] / self.num_no_metal_words))
             self.metalness[w] = 1 / (1 + math.exp(-metal_coefficient / 2))
     def calculate_metalness_score(self,lyrics):
